@@ -16,20 +16,40 @@ def push_to_new_repo(repo_url, branch_name='main'):
         # Get current directory
         current_dir = os.getcwd()
         
-        print(f"Initializing a new git repository in {current_dir}...")
-        repo = git.Repo.init(current_dir)
+        # Check if git is already initialized
+        try:
+            repo = git.Repo(current_dir)
+            print(f"Using existing git repository in {current_dir}...")
+        except git.exc.InvalidGitRepositoryError:
+            print(f"Initializing a new git repository in {current_dir}...")
+            repo = git.Repo.init(current_dir)
         
         print("Adding all files to the repository...")
         repo.git.add(all=True)
         
-        print("Committing changes...")
-        repo.git.commit('-m', 'Initial commit')
+        # Check if there are changes to commit
+        if repo.is_dirty() or len(repo.untracked_files) > 0:
+            print("Committing changes...")
+            repo.git.commit('-m', 'Initial commit')
+        else:
+            print("No changes to commit.")
         
-        print("Setting remote repository URL...")
-        origin = repo.create_remote('origin', repo_url)
+        # Check if remote 'origin' already exists
+        try:
+            origin = repo.remote('origin')
+            print("Remote 'origin' already exists. Updating URL...")
+            repo.git.remote('set-url', 'origin', repo_url)
+        except ValueError:
+            print("Setting remote repository URL...")
+            origin = repo.create_remote('origin', repo_url)
         
         print(f"Setting up branch {branch_name}...")
-        repo.git.branch('-M', branch_name)
+        # Check if branch exists
+        try:
+            repo.git.branch('-M', branch_name)
+        except git.GitCommandError:
+            # If renaming fails, create the branch
+            repo.git.checkout('-b', branch_name)
         
         print("Pushing to remote repository...")
         repo.git.push('-u', 'origin', branch_name)
@@ -38,6 +58,18 @@ def push_to_new_repo(repo_url, branch_name='main'):
         
     except git.GitCommandError as e:
         print(f"Git error: {e}")
+        print("\nDetailed error information:")
+        print(f"Command: {e.command}")
+        print(f"Status: {e.status}")
+        print(f"Stderr: {e.stderr}")
+        
+        # Provide helpful suggestions based on common errors
+        if "Permission denied" in str(e):
+            print("\nSuggestion: Check your authentication credentials. You might need to set up SSH keys or use a personal access token.")
+        elif "already exists" in str(e):
+            print("\nSuggestion: The repository or branch may already exist. Try using a different name or force pushing if appropriate.")
+        elif "rejected" in str(e) and "non-fast-forward" in str(e):
+            print("\nSuggestion: The remote repository has commits that you don't have locally. You might need to pull first or use --force if appropriate.")
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
