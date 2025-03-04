@@ -1,3 +1,5 @@
+-> python scripts/seed_data.py --output "./data/" for generation random data
+
 Reward Personalization Agent: Project Workflow Guide
 1. Project Overview: Where to Start
 To understand the project workflow, start with these files in the following order:

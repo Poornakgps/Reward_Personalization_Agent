@@ -17,6 +17,9 @@ class RewardResponse(BaseModel):
     value: float
     type: str
     
+    class Config:
+        from_attributes = True  # Updated from orm_mode
+    
 @router.get("/", response_model=List[RewardResponse])
 async def get_rewards(skip: int = 0, limit: int = 100, type: Optional[str] = None):
     """Get all available rewards with optional filtering."""

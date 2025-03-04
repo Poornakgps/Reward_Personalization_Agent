@@ -16,12 +16,18 @@ class CustomerResponse(BaseModel):
     email: str
     name: str
     
+    class Config:
+        from_attributes = True  # Updated from orm_mode
+    
 class RecommendedRewardResponse(BaseModel):
     customer_id: str
     reward_id: str
     reward_name: str
     score: float
     rationale: str
+    
+    class Config:
+        from_attributes = True  # Updated from orm_mode
 
 @router.get("/", response_model=List[CustomerResponse])
 async def get_customers(skip: int = 0, limit: int = 100):

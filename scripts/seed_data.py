@@ -4,6 +4,7 @@ Script to seed the database with initial data for development and testing.
 """
 import json
 import random
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import argparse
@@ -135,23 +136,47 @@ def main():
     parser.add_argument("--output", type=str, default="../data/", help="Output directory")
     args = parser.parse_args()
     
+    # Normalize the output path
+    output_dir = os.path.normpath(args.output)
+    
     # Generate data
     customers = generate_customers(args.customers)
     rewards = generate_rewards(args.rewards)
     events = generate_engagement_events(args.customers, args.days)
     
+    # Create output directory if it doesn't exist
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"Output directory created/verified: {output_dir}")
+    except Exception as e:
+        print(f"Error creating output directory: {e}")
+        print("Will attempt to create files anyway...")
+    
+    # Helper function to safely write data to a file
+    def safe_write_json(filename, data):
+        try:
+            filepath = os.path.join(output_dir, filename)
+            # Create parent directories if they don't exist
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            
+            with open(filepath, "w") as f:
+                json.dump(data, f, indent=2)
+            print(f"Successfully wrote to {filepath}")
+            return True
+        except Exception as e:
+            print(f"Error writing to {filename}: {e}")
+            return False
+    
     # Write to files
-    with open(f"{args.output}/customers.json", "w") as f:
-        json.dump(customers, f, indent=2)
+    customers_written = safe_write_json("customers.json", customers)
+    rewards_written = safe_write_json("rewards.json", rewards)
+    events_written = safe_write_json("events.json", events)
     
-    with open(f"{args.output}/rewards.json", "w") as f:
-        json.dump(rewards, f, indent=2)
-    
-    with open(f"{args.output}/events.json", "w") as f:
-        json.dump(events, f, indent=2)
-    
-    print(f"Generated {len(customers)} customers, {len(rewards)} rewards, and {len(events)} events")
-    print(f"Data written to {args.output}")
+    if customers_written and rewards_written and events_written:
+        print(f"Successfully generated {len(customers)} customers, {len(rewards)} rewards, and {len(events)} events")
+        print(f"Data written to {output_dir}")
+    else:
+        print("There were issues writing some files. Please check the errors above.")
 
 if __name__ == "__main__":
     main()

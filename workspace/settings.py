@@ -2,7 +2,8 @@
 Application settings and configuration.
 """
 import os
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 
 class Settings(BaseSettings):
     # API Configuration
@@ -13,7 +14,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = Field(default="", env="DATABASE_URL")
     
     # LLM Configuration
-    OPENAI_API_KEY: str = Field(default="", env="OPENAI_API_KEY")
+    GROQ_API_KEY: str = Field(default="", env="GROQ_API_KEY")
     LLM_MODEL: str = Field(default="llama3-70b", env="LLM_MODEL")
     
     # Email Service

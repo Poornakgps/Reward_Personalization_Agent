@@ -5,9 +5,14 @@ from phidata.app.agent import AgentApp
 from phidata.app.assistant import Assistant
 from phidata.app.llm import LLMApp
 from phidata.agent.tools import KnowledgeBaseTool
+import os
 
 # Import the LLM App
 from workspace.phi.workspace import llm_app, workspace_dir, data_dir
+from workspace.settings import settings
+
+# Get the LLM model from settings or environment variable
+llm_model = os.getenv("LLM_MODEL", settings.LLM_MODEL)
 
 # Create the KnowledgeBase tool
 kb_tool = KnowledgeBaseTool(
@@ -19,7 +24,7 @@ kb_tool = KnowledgeBaseTool(
 # Define the Reward Agent Assistant
 reward_agent = Assistant(
     name="reward_matching_agent",
-    llm="gpt-4-0125-preview",
+    llm=llm_model,  # Use the configured Groq model
     system_prompt="""You are a Reward Matching Agent that helps match customers with the most appropriate rewards.
     
     Your goal is to:
@@ -39,7 +44,7 @@ reward_agent = Assistant(
 # Define the Content Selection Agent Assistant
 content_agent = Assistant(
     name="content_selection_agent",
-    llm="gpt-4-0125-preview",
+    llm=llm_model,  # Use the configured Groq model
     system_prompt="""You are a Content Selection Agent that determines the optimal content mix for customer communications.
     
     Your goal is to:
