@@ -17,6 +17,19 @@ def push_to_new_repo(repo_url, branch_name='main'):
         # Get current directory
         current_dir = os.getcwd()
         
+        # Check if the URL is SSH or HTTPS format
+        is_ssh = repo_url.startswith("git@")
+        
+        # Convert HTTPS to SSH format if needed
+        if not is_ssh and "github.com" in repo_url:
+            username = re.search(r'github\.com/([^/]+)', repo_url)
+            repo_name = re.search(r'github\.com/[^/]+/([^/\.]+)', repo_url)
+            if username and repo_name:
+                ssh_url = f"git@github.com:{username.group(1)}/{repo_name.group(1)}.git"
+                print(f"Converting HTTPS URL to SSH format: {ssh_url}")
+                repo_url = ssh_url
+                is_ssh = True
+        
         # Check if git is already initialized
         try:
             repo = git.Repo(current_dir)
@@ -47,8 +60,12 @@ def push_to_new_repo(repo_url, branch_name='main'):
         # Check if remote 'origin' already exists
         try:
             origin = repo.remote('origin')
-            print("Remote 'origin' already exists. Updating URL...")
-            repo.git.remote('set-url', 'origin', repo_url)
+            current_url = next(origin.urls)
+            if current_url != repo_url:
+                print(f"Remote 'origin' exists but with different URL. Updating from {current_url} to {repo_url}...")
+                repo.git.remote('set-url', 'origin', repo_url)
+            else:
+                print(f"Remote 'origin' already exists with correct URL: {repo_url}")
         except ValueError:
             print("Setting remote repository URL...")
             origin = repo.create_remote('origin', repo_url)
@@ -61,28 +78,27 @@ def push_to_new_repo(repo_url, branch_name='main'):
             # If renaming fails, create the branch
             repo.git.checkout('-b', branch_name)
         
-        # Check if the URL is HTTPS GitHub URL
-        if "github.com" in repo_url and not repo_url.startswith("git@"):
-            print("\nNOTE: Using HTTPS with GitHub requires a personal access token instead of password.")
-            print("GitHub removed password authentication support on August 13, 2021.")
-            print("Options for authentication:")
-            print("1. Use a Personal Access Token (PAT) as your password")
-            print("   - Create one at: https://github.com/settings/tokens")
-            print("   - Use this token instead of your password when prompted")
-            print("\n2. Use SSH instead of HTTPS:")
-            username = re.search(r'github\.com/([^/]+)', repo_url)
-            repo_name = re.search(r'github\.com/[^/]+/([^/\.]+)', repo_url)
-            if username and repo_name:
-                ssh_url = f"git@github.com:{username.group(1)}/{repo_name.group(1)}.git"
-                print(f"   - Change remote URL to: {ssh_url}")
-                print(f"   - Command: git remote set-url origin {ssh_url}")
-            
-            proceed = input("\nDo you want to proceed with the push anyway? (y/n): ")
-            if proceed.lower() != 'y':
-                print("Push aborted. Please set up authentication and try again.")
-                return
+        print("Pushing to remote repository using SSH authentication...")
         
-        print("Pushing to remote repository...")
+        # Test SSH connection before pushing
+        if is_ssh:
+            print("Testing SSH connection...")
+            github_domain = repo_url.split('@')[1].split(':')[0]
+            try:
+                import subprocess
+                result = subprocess.run(['ssh', '-T', f'git@{github_domain}'], 
+                                       capture_output=True, text=True)
+                # GitHub returns non-zero status even on successful auth
+                if "successfully authenticated" in result.stderr or "You've successfully authenticated" in result.stderr:
+                    print("SSH authentication successful!")
+                else:
+                    print("SSH connection test result:")
+                    print(result.stderr)
+            except Exception as e:
+                print(f"SSH test failed: {e}")
+                print("Continuing anyway...")
+        
+        # Push to remote
         repo.git.push('-u', 'origin', branch_name)
         
         print(f"Files have been successfully pushed to {repo_url} on branch {branch_name}")
@@ -95,31 +111,26 @@ def push_to_new_repo(repo_url, branch_name='main'):
         print(f"Stderr: {e.stderr}")
         
         # Provide helpful suggestions based on common errors
-        if "Authentication failed" in str(e) or "403 Forbidden" in str(e):
-            print("\nAuthentication Error: GitHub no longer supports password authentication for HTTPS URLs.")
+        if "Permission denied (publickey)" in str(e):
+            print("\nSSH Authentication Error: Your SSH key was not accepted.")
             print("\nSolutions:")
-            print("1. Use a Personal Access Token (PAT):")
-            print("   - Create one at: https://github.com/settings/tokens")
-            print("   - Use the token as your password when prompted")
-            print("   - Store it using: git config --global credential.helper store")
-            print("\n2. Switch to SSH authentication:")
-            username = re.search(r'github\.com/([^/]+)', repo_url)
-            repo_name = re.search(r'github\.com/[^/]+/([^/\.]+)', repo_url)
-            if username and repo_name:
-                ssh_url = f"git@github.com:{username.group(1)}/{repo_name.group(1)}.git"
-                print(f"   - Generate SSH key: ssh-keygen -t ed25519 -C \"your_email@example.com\"")
-                print(f"   - Add to GitHub: https://github.com/settings/keys")
-                print(f"   - Change remote URL: git remote set-url origin {ssh_url}")
-            print("\n3. Use GitHub CLI:")
-            print("   - Install GitHub CLI: https://cli.github.com/")
-            print("   - Authenticate: gh auth login")
-            print("   - Push using: gh repo create")
-        elif "Permission denied" in str(e):
-            print("\nSuggestion: Check your authentication credentials. You might need to set up SSH keys or use a personal access token.")
+            print("1. Verify your SSH key is added to the SSH agent:")
+            print("   - Run: ssh-add -l")
+            print("   - If empty, add your key: ssh-add ~/.ssh/id_ed25519 (or your key path)")
+            print("\n2. Check your SSH key is added to your GitHub account:")
+            print("   - View your public key: cat ~/.ssh/id_ed25519.pub")
+            print("   - Add it to: https://github.com/settings/keys")
+            print("\n3. Test your SSH connection:")
+            print("   - Run: ssh -T git@github.com")
+            print("\n4. Make sure the SSH key has the correct permissions:")
+            print("   - Run: chmod 600 ~/.ssh/id_ed25519")
+            print("   - Run: chmod 700 ~/.ssh")
+        elif "rejected" in str(e) and "non-fast-forward" in str(e):
+            print("\nSuggestion: The remote repository has commits that you don't have locally.")
+            print("- Pull first: git pull --rebase origin", branch_name)
+            print("- Or force push (caution!): git push -f origin", branch_name)
         elif "already exists" in str(e):
             print("\nSuggestion: The repository or branch may already exist. Try using a different name or force pushing if appropriate.")
-        elif "rejected" in str(e) and "non-fast-forward" in str(e):
-            print("\nSuggestion: The remote repository has commits that you don't have locally. You might need to pull first or use --force if appropriate.")
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
