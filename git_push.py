@@ -3,6 +3,7 @@
 import os
 import sys
 import git
+import re
 
 def push_to_new_repo(repo_url, branch_name='main'):
     """
@@ -30,7 +31,16 @@ def push_to_new_repo(repo_url, branch_name='main'):
         # Check if there are changes to commit
         if repo.is_dirty() or len(repo.untracked_files) > 0:
             print("Committing changes...")
-            repo.git.commit('-m', 'Initial commit')
+            try:
+                repo.git.commit('-m', 'Initial commit')
+            except git.GitCommandError as e:
+                if "Please tell me who you are" in str(e):
+                    print("Git requires user configuration. Setting up default user...")
+                    repo.git.config('user.email', 'user@example.com')
+                    repo.git.config('user.name', 'Git User')
+                    repo.git.commit('-m', 'Initial commit')
+                else:
+                    raise
         else:
             print("No changes to commit.")
         
@@ -51,6 +61,27 @@ def push_to_new_repo(repo_url, branch_name='main'):
             # If renaming fails, create the branch
             repo.git.checkout('-b', branch_name)
         
+        # Check if the URL is HTTPS GitHub URL
+        if "github.com" in repo_url and not repo_url.startswith("git@"):
+            print("\nNOTE: Using HTTPS with GitHub requires a personal access token instead of password.")
+            print("GitHub removed password authentication support on August 13, 2021.")
+            print("Options for authentication:")
+            print("1. Use a Personal Access Token (PAT) as your password")
+            print("   - Create one at: https://github.com/settings/tokens")
+            print("   - Use this token instead of your password when prompted")
+            print("\n2. Use SSH instead of HTTPS:")
+            username = re.search(r'github\.com/([^/]+)', repo_url)
+            repo_name = re.search(r'github\.com/[^/]+/([^/\.]+)', repo_url)
+            if username and repo_name:
+                ssh_url = f"git@github.com:{username.group(1)}/{repo_name.group(1)}.git"
+                print(f"   - Change remote URL to: {ssh_url}")
+                print(f"   - Command: git remote set-url origin {ssh_url}")
+            
+            proceed = input("\nDo you want to proceed with the push anyway? (y/n): ")
+            if proceed.lower() != 'y':
+                print("Push aborted. Please set up authentication and try again.")
+                return
+        
         print("Pushing to remote repository...")
         repo.git.push('-u', 'origin', branch_name)
         
@@ -64,7 +95,26 @@ def push_to_new_repo(repo_url, branch_name='main'):
         print(f"Stderr: {e.stderr}")
         
         # Provide helpful suggestions based on common errors
-        if "Permission denied" in str(e):
+        if "Authentication failed" in str(e) or "403 Forbidden" in str(e):
+            print("\nAuthentication Error: GitHub no longer supports password authentication for HTTPS URLs.")
+            print("\nSolutions:")
+            print("1. Use a Personal Access Token (PAT):")
+            print("   - Create one at: https://github.com/settings/tokens")
+            print("   - Use the token as your password when prompted")
+            print("   - Store it using: git config --global credential.helper store")
+            print("\n2. Switch to SSH authentication:")
+            username = re.search(r'github\.com/([^/]+)', repo_url)
+            repo_name = re.search(r'github\.com/[^/]+/([^/\.]+)', repo_url)
+            if username and repo_name:
+                ssh_url = f"git@github.com:{username.group(1)}/{repo_name.group(1)}.git"
+                print(f"   - Generate SSH key: ssh-keygen -t ed25519 -C \"your_email@example.com\"")
+                print(f"   - Add to GitHub: https://github.com/settings/keys")
+                print(f"   - Change remote URL: git remote set-url origin {ssh_url}")
+            print("\n3. Use GitHub CLI:")
+            print("   - Install GitHub CLI: https://cli.github.com/")
+            print("   - Authenticate: gh auth login")
+            print("   - Push using: gh repo create")
+        elif "Permission denied" in str(e):
             print("\nSuggestion: Check your authentication credentials. You might need to set up SSH keys or use a personal access token.")
         elif "already exists" in str(e):
             print("\nSuggestion: The repository or branch may already exist. Try using a different name or force pushing if appropriate.")
