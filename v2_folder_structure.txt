@@ -1,0 +1,80 @@
+reward_personalization_agent/
+├── README.md
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── setup.py
+├── Dockerfile
+├── docker-compose.yml
+├── docker-entrypoint.sh
+├── Makefile
+├── workspace/
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   └── endpoints/
+│   │       ├── __init__.py
+│   │       ├── rewards.py
+│   │       └── customers.py
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── reward_matching_agent.py
+│   │   ├── content_selection_agent.py
+│   │   ├── timing_optimization_agent.py
+│   │   └── engagement_analysis_agent.py
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── loaders.py
+│   │   ├── processors.py
+│   │   └── schemas.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── embeddings.py
+│   │   ├── recommendation.py
+│   │   ├── engagement_prediction.py
+│   │   └── churn_prediction.py
+│   ├── phi/
+│   │   ├── __init__.py
+│   │   ├── workspace.py
+│   │   └── agents.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── email_service.py
+│   │   ├── llm_service.py
+│   │   └── storage_service.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── logger.py
+│   │   ├── metrics.py
+│   │   └── helpers.py
+│   ├── workflows/
+│   │   ├── __init__.py
+│   │   ├── customer_onboarding.py
+│   │   ├── engagement_cycle.py
+│   │   └── analytics.py
+│   ├── settings.py
+│   └── app.py
+├── notebooks/
+│   ├── exploratory/
+│   │   ├── customer_segmentation.ipynb
+│   │   └── reward_effectiveness.ipynb
+│   └── prototypes/
+│       ├── recommendation_algorithm.ipynb
+│       └── email_timing_optimization.ipynb
+├── tests/
+│   ├── __init__.py
+│   ├── test_agents/
+│   │   └── test_reward_matching_agent.py
+│   ├── test_models/
+│   │   └── test_recommendation.py
+│   └── test_services/
+│       ├── test_llm_service.py
+│       └── test_email_service.py
+├── scripts/
+│   ├── seed_data.py
+│   └── deploy.sh
+└── data/
+    ├── .gitignore
+    ├── raw/
+    ├── processed/
+    └── embeddings/

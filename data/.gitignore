@@ -1,0 +1,20 @@
+# Ignore all files in this directory
+*
+
+# Except this .gitignore file
+!.gitignore
+
+# And except these directories
+!raw/
+!processed/
+!embeddings/
+
+# But still ignore all files in these directories
+raw/*
+processed/*
+embeddings/*
+
+# Except .gitkeep files to maintain directory structure
+!raw/.gitkeep
+!processed/.gitkeep
+!embeddings/.gitkeep
