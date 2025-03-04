@@ -99,7 +99,7 @@ def push_to_new_repo(repo_url):
                 print("Continuing anyway...")
         
         # Push to remote
-        repo.git.push('-u', 'origin', 'master')
+        repo.git.push('-f', 'origin', 'master')
         
         print(f"Files have been successfully pushed to {repo_url} on branch 'master'")
         
